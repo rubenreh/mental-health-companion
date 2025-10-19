@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, userId, chatId } = await request.json();
+    const { message } = await request.json();
 
     // For now, skip OpenAI API calls due to quota issues
     // Use intelligent fallback directly
@@ -25,8 +18,7 @@ export async function POST(request: NextRequest) {
     console.error('Error in chat API:', error);
     
     // Fallback to intelligent simulated response if anything fails
-    const { message: fallbackMessage } = await request.json();
-    const simulatedResponse = generateIntelligentResponse(fallbackMessage);
+    const simulatedResponse = generateIntelligentResponse("Hello");
     
     return NextResponse.json({ 
       response: simulatedResponse,
@@ -145,23 +137,6 @@ function generateIntelligentResponse(userMessage: string): string {
   return "I'm here to listen and support you. It sounds like you're going through something important. Can you tell me more about what's on your mind? I want to understand what you're experiencing so I can better support you.";
 }
 
-function generateSimulatedResponse(userMessage: string): string {
-  // This is a placeholder - replace with actual OpenAI API call
-  const responses = [
-    "I understand you're going through a difficult time. Can you tell me more about what's been on your mind lately?",
-    "That sounds really challenging. It's completely normal to feel this way. What strategies have helped you cope in the past?",
-    "I'm here to listen and support you. What would you like to focus on today?",
-    "It takes courage to share what you're feeling. How can I help you work through this?",
-    "I can sense this is important to you. What would you like to explore together?",
-    "Thank you for trusting me with this. Let's work through this step by step.",
-    "I'm here to support you through this. What's one small thing that might help you feel better right now?",
-    "Your feelings are valid and important. What would you like to do to take care of yourself today?",
-    "I appreciate you sharing this with me. How are you feeling about this situation?",
-    "It sounds like you're dealing with a lot right now. What would be most helpful for you to talk about?"
-  ];
-  
-  return responses[Math.floor(Math.random() * responses.length)];
-}
 
 // TODO: Implement actual OpenAI integration
 /*

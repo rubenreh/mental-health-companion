@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef, use, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
@@ -11,17 +11,22 @@ interface Message {
   id: string;
   text: string;
   sender: "user" | "ai";
-  timestamp: any;
+  timestamp: Date;
   isTyping?: boolean;
 }
 
 interface ChatData {
   id: string;
   title: string;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: Date;
+  updatedAt: Date;
   messageCount: number;
   lastMessage: string;
+}
+
+export async function generateStaticParams() {
+  // Return empty array for static export - dynamic routes will be handled client-side
+  return [];
 }
 
 export default function ChatPage({ params }: { params: Promise<{ chatId: string }> }) {
@@ -33,42 +38,43 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
   const [isLoading, setIsLoading] = useState(false);
   const [chatData, setChatData] = useState<ChatData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<{
+    preferences: {
+      chatPreferences?: {
+        textSize?: string;
+        userBubbleColor?: string;
+        aiBubbleColor?: string;
+        chatBackground?: string;
+      };
+    };
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth");
-      return;
-    }
-
-    if (user && resolvedParams.chatId) {
-      loadUserData();
-      loadChatData();
-      loadMessages();
-    }
-  }, [user, authLoading, router, resolvedParams.chatId]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     if (!user) return;
     
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
-        setUserData(userDoc.data());
+        setUserData(userDoc.data() as {
+          preferences: {
+            chatPreferences?: {
+              textSize?: string;
+              userBubbleColor?: string;
+              aiBubbleColor?: string;
+              chatBackground?: string;
+            };
+          };
+        });
       }
     } catch (error) {
       console.error("Error loading user data:", error);
     }
-  };
+  }, [user]);
 
   const getBubbleColor = (sender: "user" | "ai") => {
     if (!userData?.preferences?.chatPreferences) return sender === "user" ? "bg-indigo-600" : "bg-gray-100";
@@ -89,7 +95,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
       gray: "bg-gray-100"
     };
     
-    return colorMap[color] || (sender === "user" ? "bg-indigo-600" : "bg-gray-100");
+    return colorMap[color || 'indigo'] || (sender === "user" ? "bg-indigo-600" : "bg-gray-100");
   };
 
   const getTextSize = () => {
@@ -120,7 +126,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
     return bgMap[userData.preferences.chatPreferences.chatBackground] || "bg-white";
   };
 
-  const loadChatData = async () => {
+  const loadChatData = useCallback(async () => {
     if (!user || !resolvedParams.chatId) return;
 
     try {
@@ -141,9 +147,9 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
       console.error("Error loading chat data:", error);
       setChatData(null);
     }
-  };
+  }, [user, resolvedParams.chatId]);
 
-  const loadMessages = () => {
+  const loadMessages = useCallback(() => {
     if (!user || !resolvedParams.chatId) return;
 
     const messagesRef = collection(db, "users", user.uid, "chats", resolvedParams.chatId, "messages");
@@ -165,7 +171,24 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
     });
 
     return unsubscribe;
-  };
+  }, [user, resolvedParams.chatId]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth");
+      return;
+    }
+
+    if (user && resolvedParams.chatId) {
+      loadUserData();
+      loadChatData();
+      loadMessages();
+    }
+  }, [user, authLoading, router, resolvedParams.chatId, loadUserData, loadChatData, loadMessages]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const sendMessage = async () => {
     if (!inputText.trim() || !resolvedParams.chatId || !user || isLoading) return;
@@ -207,7 +230,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
         if (!response.ok) {
           console.log(`API responded with status: ${response.status}, using fallback`);
           // Use fallback response instead of throwing error
-          const fallbackResponse = generateAIResponse(userMessage);
+                  const fallbackResponse = generateAIResponse();
           await updateDoc(doc(db, "users", user.uid, "chats", resolvedParams.chatId, "messages", typingRef.id), {
             isTyping: false,
             text: fallbackResponse
@@ -233,7 +256,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
         // Fallback to simulated response
         await updateDoc(doc(db, "users", user.uid, "chats", resolvedParams.chatId, "messages", typingRef.id), {
           isTyping: false,
-          text: generateAIResponse(userMessage)
+                text: generateAIResponse()
         });
       } finally {
         setIsLoading(false);
@@ -245,7 +268,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
     }
   };
 
-  const generateAIResponse = (userMessage: string): string => {
+  const generateAIResponse = (): string => {
     const responses = [
       "I understand you're going through a difficult time. Can you tell me more about what's been on your mind lately?",
       "That sounds really challenging. It's completely normal to feel this way. What strategies have helped you cope in the past?",
@@ -329,7 +352,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Chat Not Found</h2>
             <p className="text-gray-600 mb-6">
-              The chat you're looking for doesn't exist or you don't have permission to access it.
+              The chat you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to access it.
             </p>
             <button
               onClick={() => router.push("/dashboard")}
@@ -394,21 +417,21 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Start your conversation</h3>
-                <p className="text-gray-600 mb-4">
-                  I'm here to listen and support you. Share whatever is on your mind.
-                </p>
+                        <p className="text-gray-600 mb-4">
+                          I&apos;m here to listen and support you. Share whatever is on your mind.
+                        </p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   <button
-                    onClick={() => setInputText("I've been feeling anxious lately")}
+                    onClick={() => setInputText("I&apos;ve been feeling anxious lately")}
                     className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
                   >
-                    I've been feeling anxious lately
+                    I&apos;ve been feeling anxious lately
                   </button>
                   <button
-                    onClick={() => setInputText("I'm struggling with motivation")}
+                    onClick={() => setInputText("I&apos;m struggling with motivation")}
                     className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
                   >
-                    I'm struggling with motivation
+                    I&apos;m struggling with motivation
                   </button>
                   <button
                     onClick={() => setInputText("I feel lonely")}
@@ -419,7 +442,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
                 </div>
               </div>
             ) : (
-              messages.map((message, index) => (
+                      messages.map((message) => (
                 <motion.div
                   key={message.id}
                   initial={{ opacity: 0, y: 20 }}

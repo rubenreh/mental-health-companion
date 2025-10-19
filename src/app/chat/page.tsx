@@ -1,49 +1,34 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { doc, addDoc, collection, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, addDoc, collection, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface Message {
   id: string;
   text: string;
   sender: "user" | "ai";
-  timestamp: any;
+  timestamp: Date;
   isTyping?: boolean;
 }
 
 export default function ChatPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [chatId, setChatId] = useState<string | null>(null);
+  const [chatId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth");
-      return;
-    }
-
-    if (user) {
-      createNewChat();
-    }
-  }, [user, authLoading, router]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const createNewChat = async () => {
+  const createNewChat = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -59,31 +44,46 @@ export default function ChatPage() {
     } catch (error) {
       console.error("Error creating chat:", error);
     }
-  };
+  }, [user, router]);
 
-  const loadMessages = (chatId: string) => {
-    if (!user) return;
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth");
+      return;
+    }
 
-    const messagesRef = collection(db, "users", user.uid, "chats", chatId, "messages");
-    const q = query(messagesRef, orderBy("timestamp", "asc"));
+    if (user) {
+      createNewChat();
+    }
+  }, [user, authLoading, router, createNewChat]);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messagesData: Message[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        messagesData.push({
-          id: doc.id,
-          text: data.text,
-          sender: data.sender,
-          timestamp: data.timestamp,
-          isTyping: data.isTyping
-        });
-      });
-      setMessages(messagesData);
-    });
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-    return unsubscribe;
-  };
+  // const loadMessages = useCallback((chatId: string) => {
+  //   if (!user) return;
+
+  //   const messagesRef = collection(db, "users", user.uid, "chats", chatId, "messages");
+  //   const q = query(messagesRef, orderBy("timestamp", "asc"));
+
+  //   const unsubscribe = onSnapshot(q, (snapshot) => {
+  //     const messagesData: Message[] = [];
+  //     snapshot.forEach((doc) => {
+  //       const data = doc.data();
+  //       messagesData.push({
+  //         id: doc.id,
+  //         text: data.text,
+  //         sender: data.sender,
+  //         timestamp: data.timestamp,
+  //         isTyping: data.isTyping
+  //       });
+  //     });
+  //     setMessages(messagesData);
+  //   });
+
+  //   return unsubscribe;
+  // }, [user]);
 
   const sendMessage = async () => {
     if (!inputText.trim() || !chatId || !user || isLoading) return;
@@ -125,7 +125,7 @@ export default function ChatPage() {
         if (!response.ok) {
           console.log(`API responded with status: ${response.status}, using fallback`);
           // Use fallback response instead of throwing error
-          const fallbackResponse = generateAIResponse(userMessage);
+          const fallbackResponse = generateAIResponse();
           await updateDoc(doc(db, "users", user.uid, "chats", chatId, "messages", typingRef.id), {
             isTyping: false,
             text: fallbackResponse
@@ -151,7 +151,7 @@ export default function ChatPage() {
         // Fallback to simulated response
         await updateDoc(doc(db, "users", user.uid, "chats", chatId, "messages", typingRef.id), {
           isTyping: false,
-          text: generateAIResponse(userMessage)
+          text: generateAIResponse()
         });
       } finally {
         setIsLoading(false);
@@ -163,7 +163,7 @@ export default function ChatPage() {
     }
   };
 
-  const generateAIResponse = (userMessage: string): string => {
+  const generateAIResponse = (): string => {
     // This is a placeholder - replace with actual OpenAI API integration
     const responses = [
       "I understand you're going through a difficult time. Can you tell me more about what's been on your mind lately?",
@@ -237,21 +237,21 @@ export default function ChatPage() {
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome to your safe space</h3>
-                <p className="text-gray-600 mb-4">
-                  I'm here to listen and support you. Share whatever is on your mind.
-                </p>
+                        <p className="text-gray-600 mb-4">
+                          I&apos;m here to listen and support you. Share whatever is on your mind.
+                        </p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   <button
-                    onClick={() => setInputText("I've been feeling anxious lately")}
+                    onClick={() => setInputText("I&apos;ve been feeling anxious lately")}
                     className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
                   >
-                    I've been feeling anxious lately
+                    I&apos;ve been feeling anxious lately
                   </button>
                   <button
-                    onClick={() => setInputText("I'm struggling with motivation")}
+                    onClick={() => setInputText("I&apos;m struggling with motivation")}
                     className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
                   >
-                    I'm struggling with motivation
+                    I&apos;m struggling with motivation
                   </button>
                   <button
                     onClick={() => setInputText("I feel lonely")}
@@ -262,7 +262,7 @@ export default function ChatPage() {
                 </div>
               </div>
             ) : (
-              messages.map((message, index) => (
+                      messages.map((message) => (
                 <motion.div
                   key={message.id}
                   initial={{ opacity: 0, y: 20 }}

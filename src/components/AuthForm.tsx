@@ -19,7 +19,7 @@ export default function AuthForm() {
         await createUserWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 

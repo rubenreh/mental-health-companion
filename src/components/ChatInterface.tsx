@@ -26,7 +26,8 @@ export default function ChatInterface() {
       });
 
       // Add to local state
-      addMessage(message as any);
+      // @ts-expect-error - Message type compatibility issue
+      addMessage(message);
       
       // Clear input
       setInput('');
@@ -52,7 +53,8 @@ export default function ChatInterface() {
             id: change.doc.id,
             ...change.doc.data(),
           };
-          addMessage(message as any);
+          // @ts-expect-error - Message type compatibility issue
+      addMessage(message);
         }
       });
     });

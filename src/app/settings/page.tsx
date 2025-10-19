@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
@@ -69,25 +69,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth");
-      return;
-    }
-
-    if (user) {
-      loadUserData();
-    }
-  }, [user, authLoading, router]);
-
-  // Apply theme when userData changes
-  useEffect(() => {
-    if (userData) {
-      applyTheme(userData.preferences.darkMode, userData.preferences.accentColor);
-    }
-  }, [userData]);
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -118,7 +100,25 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth");
+      return;
+    }
+
+    if (user) {
+      loadUserData();
+    }
+  }, [user, authLoading, router, loadUserData]);
+
+  // Apply theme when userData changes
+  useEffect(() => {
+    if (userData) {
+      applyTheme(userData.preferences.darkMode, userData.preferences.accentColor);
+    }
+  }, [userData]);
 
   const handleSave = async () => {
     if (!user || !userData) return;
@@ -592,14 +592,14 @@ export default function Settings() {
               {/* Sample User Message */}
               <div className="flex justify-end">
                 <div className={`max-w-xs px-4 py-3 rounded-2xl ${getBubbleColor("user")} text-white`}>
-                  <p className={getTextSize()}>Hello, I'm feeling anxious today</p>
+                  <p className={getTextSize()}>Hello, I&apos;m feeling anxious today</p>
                 </div>
               </div>
               
               {/* Sample AI Message */}
               <div className="flex justify-start">
                 <div className={`max-w-xs px-4 py-3 rounded-2xl ${getBubbleColor("ai")} text-gray-900`}>
-                  <p className={getTextSize()}>I understand you're feeling anxious. That's completely normal. Can you tell me more about what's making you feel this way?</p>
+                  <p className={getTextSize()}>I understand you&apos;re feeling anxious. That&apos;s completely normal. Can you tell me more about what&apos;s making you feel this way?</p>
                 </div>
               </div>
               

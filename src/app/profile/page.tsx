@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
@@ -44,18 +44,7 @@ export default function Profile() {
   const [newTopic, setNewTopic] = useState("");
   const [newGoal, setNewGoal] = useState("");
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth");
-      return;
-    }
-
-    if (user) {
-      loadUserData();
-    }
-  }, [user, authLoading, router]);
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -81,7 +70,18 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth");
+      return;
+    }
+
+    if (user) {
+      loadUserData();
+    }
+  }, [user, authLoading, router, loadUserData]);
 
   const updatePreferences = async (updates: Partial<UserData["preferences"]>) => {
     if (!user || !userData) return;
@@ -310,7 +310,7 @@ export default function Profile() {
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Mental Health Topics</h2>
             <p className="text-gray-800 mb-6">
-              Select topics you'd like to focus on or learn more about. This helps your AI companion provide targeted support.
+              Select topics you&apos;d like to focus on or learn more about. This helps your AI companion provide targeted support.
             </p>
             
             <div className="flex space-x-2 mb-6">

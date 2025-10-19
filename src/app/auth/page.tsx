@@ -31,9 +31,9 @@ export default function AuthPage() {
         await signUp(email, password, name);
         console.log("Sign up successful");
       }
-    } catch (err: any) {
+          } catch (err: unknown) {
       console.error("Authentication error:", err);
-      setError(err.message || "An error occurred");
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }

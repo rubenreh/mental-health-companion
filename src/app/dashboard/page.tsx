@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -12,7 +12,7 @@ interface Chat {
   id: string;
   title: string;
   lastMessage: string;
-  updatedAt: any;
+  updatedAt: Date;
   messageCount: number;
 }
 
@@ -23,6 +23,8 @@ interface UserData {
     weeklyEmails: boolean;
     interests: string[];
     goals: string[];
+    darkMode?: boolean;
+    accentColor?: string;
   };
 }
 
@@ -32,6 +34,40 @@ export default function Dashboard() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [recentChats, setRecentChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const loadUserData = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        setUserData(userDoc.data() as UserData);
+      }
+    } catch (error) {
+      console.error("Error loading user data:", error);
+    }
+  }, [user]);
+
+  const loadRecentChats = useCallback(() => {
+    if (!user) return;
+
+    const chatsRef = collection(db, "users", user.uid, "chats");
+    const q = query(chatsRef, orderBy("updatedAt", "desc"), limit(5));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const chats: Chat[] = [];
+      snapshot.forEach((doc) => {
+        chats.push({
+          id: doc.id,
+          ...doc.data()
+        } as Chat);
+      });
+      setRecentChats(chats);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -43,7 +79,7 @@ export default function Dashboard() {
       loadUserData();
       loadRecentChats();
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, loadUserData, loadRecentChats]);
 
   // Apply theme when userData changes
   useEffect(() => {
@@ -56,47 +92,10 @@ export default function Dashboard() {
       }
 
       // Apply accent color
-      document.documentElement.setAttribute('data-accent', userData.preferences.accentColor);
+      document.documentElement.setAttribute('data-accent', userData.preferences.accentColor || 'indigo');
     }
   }, [userData]);
 
-  const loadUserData = async () => {
-    if (!user) return;
-    
-    try {
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        setUserData(userDoc.data() as UserData);
-      }
-    } catch (error) {
-      console.error("Error loading user data:", error);
-    }
-  };
-
-  const loadRecentChats = () => {
-    if (!user) return;
-
-    const chatsRef = collection(db, "users", user.uid, "chats");
-    const q = query(chatsRef, orderBy("updatedAt", "desc"), limit(5));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chats: Chat[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        chats.push({
-          id: doc.id,
-          title: data.title || "New Chat",
-          lastMessage: data.lastMessage || "",
-          updatedAt: data.updatedAt,
-          messageCount: data.messageCount || 0
-        });
-      });
-      setRecentChats(chats);
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  };
 
   const handleLogout = async () => {
     try {
@@ -224,7 +223,7 @@ export default function Dashboard() {
                     Welcome back, <span className={`bg-gradient-to-r ${getAccentClasses(userData?.preferences.accentColor || 'indigo')} bg-clip-text text-transparent`}>{userData?.name || user?.email?.split('@')[0]}</span>!
                   </h1>
           <p className="text-xl text-gray-800 max-w-2xl mx-auto">
-            How are you feeling today? I'm here to listen and support you on your mental health journey.
+            How are you feeling today? I&apos;m here to listen and support you on your mental health journey.
           </p>
         </motion.div>
 
@@ -255,7 +254,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="text-left">
-                <p className="text-sm opacity-80">Share what's on your mind and get personalized support</p>
+                <p className="text-sm opacity-80">Share what&apos;s on your mind and get personalized support</p>
               </div>
             </div>
           </motion.button>
@@ -380,8 +379,8 @@ export default function Dashboard() {
                     </div>
                     <div className="text-right text-sm text-gray-500 group-hover:text-gray-600 transition-colors">
                       <p className="font-medium">{chat.messageCount} messages</p>
-                      <p>{chat.updatedAt?.toDate ? 
-                        chat.updatedAt.toDate().toLocaleDateString() : 
+                      <p>{chat.updatedAt ? 
+                        new Date(chat.updatedAt).toLocaleDateString() : 
                         "Recently"
                       }</p>
                     </div>

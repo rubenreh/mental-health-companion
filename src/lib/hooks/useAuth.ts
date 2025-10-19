@@ -57,8 +57,8 @@ export function useAuth() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // Redirect is handled by onAuthStateChanged
-    } catch (error: any) {
-      throw new Error(error.message);
+            } catch (error: unknown) {
+              throw new Error(error instanceof Error ? error.message : "An error occurred");
     }
   };
 
@@ -78,8 +78,8 @@ export function useAuth() {
         chatHistory: []
       });
       // Redirect is handled by onAuthStateChanged
-    } catch (error: any) {
-      throw new Error(error.message);
+            } catch (error: unknown) {
+              throw new Error(error instanceof Error ? error.message : "An error occurred");
     }
   };
 
@@ -87,8 +87,8 @@ export function useAuth() {
     try {
       await signOut(auth);
       router.push("/");
-    } catch (error: any) {
-      throw new Error(error.message);
+            } catch (error: unknown) {
+              throw new Error(error instanceof Error ? error.message : "An error occurred");
     }
   };
 
