@@ -24,11 +24,6 @@ interface ChatData {
   lastMessage: string;
 }
 
-export async function generateStaticParams() {
-  // Return empty array for static export - dynamic routes will be handled client-side
-  return [];
-}
-
 export default function ChatPage({ params }: { params: Promise<{ chatId: string }> }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -139,7 +134,6 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
           ...chatSnapshot.data()
         } as ChatData);
       } else {
-        // Chat doesn't exist, show error message instead of redirecting
         console.log("Chat not found");
         setChatData(null);
       }
@@ -198,14 +192,12 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
     setIsLoading(true);
 
     try {
-      // Add user message
       await addDoc(collection(db, "users", user.uid, "chats", resolvedParams.chatId, "messages"), {
         text: userMessage,
         sender: "user",
         timestamp: serverTimestamp()
       });
 
-      // Add typing indicator
       const typingRef = await addDoc(collection(db, "users", user.uid, "chats", resolvedParams.chatId, "messages"), {
         text: "",
         sender: "ai",
@@ -213,7 +205,6 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
         isTyping: true
       });
 
-      // Call AI API
       try {
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -229,23 +220,20 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
 
         if (!response.ok) {
           console.log(`API responded with status: ${response.status}, using fallback`);
-          // Use fallback response instead of throwing error
-                  const fallbackResponse = generateAIResponse();
+          const fallbackResponse = generateAIResponse();
           await updateDoc(doc(db, "users", user.uid, "chats", resolvedParams.chatId, "messages", typingRef.id), {
             isTyping: false,
             text: fallbackResponse
           });
         } else {
           const data = await response.json();
-          
-          // Remove typing indicator and add AI response
+
           await updateDoc(doc(db, "users", user.uid, "chats", resolvedParams.chatId, "messages", typingRef.id), {
             isTyping: false,
             text: data.response
           });
         }
 
-        // Update chat metadata
         await updateDoc(doc(db, "users", user.uid, "chats", resolvedParams.chatId), {
           updatedAt: serverTimestamp(),
           lastMessage: userMessage,
@@ -253,10 +241,9 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
         });
       } catch (error) {
         console.error("Error calling AI API:", error);
-        // Fallback to simulated response
         await updateDoc(doc(db, "users", user.uid, "chats", resolvedParams.chatId, "messages", typingRef.id), {
           isTyping: false,
-                text: generateAIResponse()
+          text: generateAIResponse()
         });
       } finally {
         setIsLoading(false);
@@ -288,17 +275,14 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
 
     setIsDeleting(true);
     try {
-      // Delete all messages first
       const messagesRef = collection(db, "users", user.uid, "chats", resolvedParams.chatId, "messages");
       const messagesSnapshot = await getDocs(messagesRef);
-      
+
       const deletePromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
 
-      // Delete the chat document
       await deleteDoc(doc(db, "users", user.uid, "chats", resolvedParams.chatId));
-      
-      // Redirect to dashboard
+
       router.push("/dashboard");
     } catch (error) {
       console.error("Error deleting chat:", error);
@@ -417,9 +401,9 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Start your conversation</h3>
-                        <p className="text-gray-600 mb-4">
-                          I&apos;m here to listen and support you. Share whatever is on your mind.
-                        </p>
+                <p className="text-gray-600 mb-4">
+                  I&apos;m here to listen and support you. Share whatever is on your mind.
+                </p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   <button
                     onClick={() => setInputText("I&apos;ve been feeling anxious lately")}
@@ -442,7 +426,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
                 </div>
               </div>
             ) : (
-                      messages.map((message) => (
+              messages.map((message) => (
                 <motion.div
                   key={message.id}
                   initial={{ opacity: 0, y: 20 }}
