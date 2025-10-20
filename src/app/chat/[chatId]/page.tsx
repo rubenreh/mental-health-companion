@@ -50,7 +50,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
   };
 
   const loadUserData = useCallback(async () => {
-    if (!user) return;
+    if (!user || !db) return;
     
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -122,7 +122,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
   };
 
   const loadChatData = useCallback(async () => {
-    if (!user || !resolvedParams.chatId) return;
+    if (!user || !resolvedParams.chatId || !db) return;
 
     try {
       const chatDoc = await doc(db, "users", user.uid, "chats", resolvedParams.chatId);
@@ -144,7 +144,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
   }, [user, resolvedParams.chatId]);
 
   const loadMessages = useCallback(() => {
-    if (!user || !resolvedParams.chatId) return;
+    if (!user || !resolvedParams.chatId || !db) return;
 
     const messagesRef = collection(db, "users", user.uid, "chats", resolvedParams.chatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "asc"));
@@ -185,7 +185,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!inputText.trim() || !resolvedParams.chatId || !user || isLoading) return;
+    if (!inputText.trim() || !resolvedParams.chatId || !user || isLoading || !db) return;
 
     const userMessage = inputText.trim();
     setInputText("");
@@ -271,7 +271,7 @@ export default function ChatPage({ params }: { params: Promise<{ chatId: string 
   };
 
   const deleteChat = async () => {
-    if (!user || !resolvedParams.chatId || isDeleting) return;
+    if (!user || !resolvedParams.chatId || isDeleting || !db) return;
 
     setIsDeleting(true);
     try {

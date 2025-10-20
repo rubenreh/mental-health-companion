@@ -36,7 +36,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   const loadUserData = useCallback(async () => {
-    if (!user) return;
+    if (!user || !db) return;
     
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -49,7 +49,7 @@ export default function Dashboard() {
   }, [user]);
 
   const loadRecentChats = useCallback(() => {
-    if (!user) return;
+    if (!user || !db) return;
 
     const chatsRef = collection(db, "users", user.uid, "chats");
     const q = query(chatsRef, orderBy("updatedAt", "desc"), limit(5));

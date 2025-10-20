@@ -45,7 +45,7 @@ export default function Profile() {
   const [newGoal, setNewGoal] = useState("");
 
   const loadUserData = useCallback(async () => {
-    if (!user) return;
+    if (!user || !db) return;
     
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -84,7 +84,7 @@ export default function Profile() {
   }, [user, authLoading, router, loadUserData]);
 
   const updatePreferences = async (updates: Partial<UserData["preferences"]>) => {
-    if (!user || !userData) return;
+    if (!user || !userData || !db) return;
 
     setSaving(true);
     try {

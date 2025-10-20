@@ -18,12 +18,17 @@ export function useAuth() {
   const router = useRouter();
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state changed:", user ? "User logged in" : "User logged out");
       setUser(user);
       setLoading(false);
       
-      if (user) {
+      if (user && db) {
         console.log("User authenticated, checking user document...");
         // Check if user document exists, create if not
         const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -54,6 +59,9 @@ export function useAuth() {
   }, [router]);
 
   const signIn = async (email: string, password: string) => {
+    if (!auth) {
+      throw new Error("Authentication service not available");
+    }
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // Redirect is handled by onAuthStateChanged
@@ -63,6 +71,9 @@ export function useAuth() {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
+    if (!auth || !db) {
+      throw new Error("Authentication service not available");
+    }
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await setDoc(doc(db, "users", userCredential.user.uid), {
@@ -84,6 +95,9 @@ export function useAuth() {
   };
 
   const logout = async () => {
+    if (!auth) {
+      throw new Error("Authentication service not available");
+    }
     try {
       await signOut(auth);
       router.push("/");

@@ -12,6 +12,11 @@ export default function AuthForm() {
     e.preventDefault();
     setError('');
 
+    if (!auth) {
+      setError("Authentication service not available");
+      return;
+    }
+
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);

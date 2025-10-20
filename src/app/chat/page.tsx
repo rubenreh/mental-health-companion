@@ -29,7 +29,7 @@ export default function ChatPage() {
   };
 
   const createNewChat = useCallback(async () => {
-    if (!user) return;
+    if (!user || !db) return;
 
     try {
       const chatRef = await addDoc(collection(db, "users", user.uid, "chats"), {
@@ -86,7 +86,7 @@ export default function ChatPage() {
   // }, [user]);
 
   const sendMessage = async () => {
-    if (!inputText.trim() || !chatId || !user || isLoading) return;
+    if (!inputText.trim() || !chatId || !user || isLoading || !db) return;
 
     const userMessage = inputText.trim();
     setInputText("");

@@ -70,7 +70,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
 
   const loadUserData = useCallback(async () => {
-    if (!user) return;
+    if (!user || !db) return;
     
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -121,7 +121,7 @@ export default function Settings() {
   }, [userData]);
 
   const handleSave = async () => {
-    if (!user || !userData) return;
+    if (!user || !userData || !db) return;
 
     setSaving(true);
     try {

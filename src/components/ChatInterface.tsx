@@ -20,6 +20,7 @@ export default function ChatInterface() {
       };
 
       // Add to Firestore
+      if (!db) return;
       await addDoc(collection(db, 'messages'), {
         ...message,
         timestamp: serverTimestamp(),
@@ -39,7 +40,7 @@ export default function ChatInterface() {
   };
 
   useEffect(() => {
-    if (!currentChat) return;
+    if (!currentChat || !db) return;
 
     const q = query(
       collection(db, 'messages'),
